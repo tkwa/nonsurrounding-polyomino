@@ -2,6 +2,7 @@
 
 from ortools.sat.python import cp_model
 
+from pattern_generation import *
 
 # %%
 
@@ -209,7 +210,12 @@ class PolyominoSATInstance:
                 [self.zeros[-1][c].Not() for c in range(col, self.cols)]
             )
     
-    def pattern_to_constraint(self, pattern:str, name:str):
+    def pattern_to_constraint(self, pattern:Pattern):
+        self.model.AddBoolOr(
+            [self.zeros[i][j] for (i,j) in pattern.bad] +
+            [self.zeros[i][j].Not() for (i,j) in pattern.good]
+        )
+    def add_all_copies_of_pattern(self,pattern:str):
         """
         Add a constraint based on a pattern (multiline string).
         The edges and corners define how the pattern should be extended.
@@ -220,6 +226,10 @@ class PolyominoSATInstance:
         .1..
         ....
         """
+        P = Pattern(pattern)
+        for variant in P.all_isometric_copies_within_box(self.rows,self.cols):
+            self.pattern_to_constraint(self, variant)
+
 
 
 
