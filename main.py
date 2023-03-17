@@ -212,8 +212,8 @@ class PolyominoSATInstance:
     
     def pattern_to_constraint(self, pattern:Pattern):
         self.model.AddBoolOr(
-            [self.zeros[i][j] for (i,j) in pattern.bad] +
-            [self.zeros[i][j].Not() for (i,j) in pattern.good]
+            [self.zeros[i][j].Not() for (i,j) in pattern.bad] +
+            [self.zeros[i][j] for (i,j) in pattern.good]
         )
     def add_all_copies_of_pattern(self,pattern:str):
         """
@@ -228,7 +228,7 @@ class PolyominoSATInstance:
         """
         P = Pattern(pattern)
         for variant in P.all_isometric_copies_within_box(self.rows,self.cols):
-            self.pattern_to_constraint(self, variant)
+            self.pattern_to_constraint(variant)
 
 
 
@@ -273,12 +273,20 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
 # %%
 
-omino_instance = PolyominoSATInstance(5,5, 15)
+omino_instance = PolyominoSATInstance(6,6, 15)
 omino_instance.add_boundary_constraint(top_and_right=False)
-omino_instance.add_corner_constraint()
-omino_instance.add_max_weight_constraint(10)
+# omino_instance.add_corner_constraint()
+omino_instance.add_max_weight_constraint(24)
 omino_instance.add_surround_constraint()
-omino_instance.add_s2_constraint()
+# omino_instance.add_s2_constraint()
+for patterns in [
+    corner_pattern,
+    shift_pattern,
+    shifted_U_pattern,
+    diamond_contact_pattern,
+    offset_corner_pattern,
+]:
+    omino_instance.add_all_copies_of_pattern(patterns)
 
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(omino_instance)

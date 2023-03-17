@@ -89,19 +89,45 @@ shifted_U_pattern="""
            1
 """
 diamond_contact_pattern = """
-       000
-      00100
-     00   00
-    00     00
-   00       00
-  00         00
- 00           00
-00             00
+       0000
+      001 00
+     00    00
+    00      00
+   00        00
+  00          00
+ 00            00
+00              00
 """
+offset_corner_pattern = """
+00000000000000
+001 0000000000
+0
+0
+0
+0
+0
+0
+0
+0
+"""
+# offset_corner_pattern_2 = """
+# 00000000000000
+# 0 100000000000
+# 0
+# 0
+# 0
+# 0
+# 0
+# 0
+# 0
+# 0
+# """
+
 big_corner_pattern = """
 000000000000000000
                 1
                 1
                 111
 """
+
 #code to extract things: l = list(Pattern(shift_pattern).all_isometric_copies_within_box(10,10))
