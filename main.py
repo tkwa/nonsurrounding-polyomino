@@ -239,14 +239,16 @@ class PolyominoSATInstance:
 class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
     """Print intermediate solutions."""
 
-    def __init__(self, pi:PolyominoSATInstance):
+    def __init__(self, pi:PolyominoSATInstance, do_print = True):
         cp_model.CpSolverSolutionCallback.__init__(self)
         self.pi = pi
         self.vars, self.ones, self.zeros, self.vm1_places = pi.vars, pi.ones, pi.zeros, pi.vm1_places
         self.__solution_count = 0
+        self.print = do_print
 
     def on_solution_callback(self):
         self.__solution_count += 1
+        if not self.print: return
         print('Solution %i' % self.__solution_count)
         for row in range(self.pi.rows)[::-1]: # print from top to bottom
             for col in range(self.pi.cols):
@@ -273,7 +275,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
 # %%
 
-omino_instance = PolyominoSATInstance(6,6, 15)
+omino_instance = PolyominoSATInstance(6,7, 15)
 omino_instance.add_boundary_constraint(top_and_right=False)
 # omino_instance.add_corner_constraint()
 omino_instance.add_max_weight_constraint(24)
@@ -285,11 +287,15 @@ for patterns in [
     shifted_U_pattern,
     diamond_contact_pattern,
     offset_corner_pattern,
+    offset_corner_pattern_2,
+    flipped_U_pattern,
+    scoop_pattern,
+    deep_scoop_pattern,
 ]:
     omino_instance.add_all_copies_of_pattern(patterns)
 
 solver = cp_model.CpSolver()
-solution_printer = VarArraySolutionPrinter(omino_instance)
+solution_printer = VarArraySolutionPrinter(omino_instance, do_print=True)
 # Enumerate all solutions.
 solver.parameters.enumerate_all_solutions = True
 # Solve.
@@ -298,5 +304,6 @@ status = solver.Solve(omino_instance.model, solution_printer)
 print('Status = %s' % solver.StatusName(status))
 print('Number of solutions found: %i' % solution_printer.solution_count())
 print(f'Time: {solver.WallTime():.3f}')
+print(f"Info: {solver.ResponseStats()}")
 
 # %%
