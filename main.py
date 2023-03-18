@@ -159,56 +159,115 @@ class PolyominoSATInstance:
                 ])
         self.constraint_descriptions.append('surround')
 
-    def add_s2_constraint(self):
+    def valid_c2_placements(self):
+        """Helper function for below. Returns a list of three coordinate pairs (center, side1, side2)."""
+        rows, cols = self.rows, self.cols
+        for row in range(rows):
+            for col in range(cols):
+                if row > 0 and col > 0:
+                    yield [(row, col), (row-1, col), (row, col-1)]
+                if row > 0 and col < cols - 1:
+                    yield [(row, col), (row-1, col), (row, col+1)]
+                if row < rows - 1 and col > 0:
+                    yield [(row, col), (row+1, col), (row, col-1)]
+                if row < rows - 1 and col < cols - 1:
+                    yield [(row, col), (row+1, col), (row, col+1)]
+
+    def valid_c4_placements(self, all_centers=True):
+        """Helper function for below. Returns a list of two coordinate pairs (center, side).
+        If all_centers=False, we only check centers off the edge of the grid.
         """
-        There must not be this pattern:
-        000000
-        001...
+        rows, cols = self.rows, self.cols
+        for row in range(rows):
+            for col in range(cols):
+                if row > 0:
+                    yield [(row, col), (row-1, col)]
+                if row < rows - 1:
+                    yield [(row, col), (row+1, col)]
+                if col > 0:
+                    yield [(row, col), (row, col-1)]
+                if col < cols - 1:
+                    yield [(row, col), (row, col+1)]
+                    
+
+    def c2_coords_to_check(self, center):
+        """Helper function for below. Returns a list of pairs of points."""
+        dims =  self.rows, self.cols
+        xr = min(center[1], dims[1] - center[1] - 1)
+        yr = min(center[0], dims[0] - center[0] - 1)
+        for xshift in range(-xr,xr+1):
+            for yshift in range(0, yr+1):
+                if xshift <= 0 and yshift == 0:
+                    continue
+                else:
+                    yield (center[0] + yshift, center[1] + xshift), (center[0] - yshift, center[1] - xshift)
+
+    def c2_constraints(self):
+        """
+        Adds constraints corresponding to partitions with C2 symmetry.
+        ......
+        .01...
         .1....
         ......
-        Only check first/last row and column.
-        5x5: 63k -> 81
+        For each placement that fits the above pattern,
+        a nonsurrounding omino must contain both cells from at least one pair of cells symmetric about the 0.
+        Since the constraint is a disjunction of conjunctions, we need to create new variables.
         """
-        # 1s in (row + 1, 0) and (row, 1)
-        for row in range(self.rows-1):
-            self.model.AddBoolOr(
-                [self.zeros[row+1][0], self.zeros[row][1]] +
-                [self.zeros[r][0].Not() for r in range(row+1)]
-            )
-            self.model.AddBoolOr(
-                [self.zeros[row+1][-1], self.zeros[row][-2]] +
-                [self.zeros[r][-1].Not() for r in range(row+1)]
-            )
-        
-        for row in range(1, self.rows):
-            self.model.AddBoolOr(
-                [self.zeros[row-1][0], self.zeros[row][1]] +
-                [self.zeros[r][0].Not() for r in range(row, self.rows)]
-            )
-            self.model.AddBoolOr(
-                [self.zeros[row-1][-1], self.zeros[row][-2]] +
-                [self.zeros[r][-1].Not() for r in range(row, self.rows)]
-            )
+        for center, side1, side2 in self.valid_c2_placements():
+            conjunction_vars = []
+            for p1, p2 in self.c2_coords_to_check(center):
+                y1, x1 = p1
+                y2, x2 = p2
+                new_var = self.model.NewBoolVar(f'c2_{x1}_{y1}_{x2}_{y2}')
+                self.model.AddBoolOr(self.zeros[y1][x1], self.zeros[y2][x2]).OnlyEnforceIf(new_var.Not())
+                self.model.AddBoolAnd(self.zeros[y1][x1].Not(), self.zeros[y2][x2].Not()).OnlyEnforceIf(new_var)
+                conjunction_vars.append(new_var)
+            yc, xc = center
+            ys1, xs1= side1
+            ys2, xs2 = side2
+            self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
+                self.zeros[yc][xc], self.zeros[ys1][xs1].Not(), self.zeros[ys2][xs2].Not())
+    
+    def c4_coords_to_check(self, center):
+        """
+        Helper function for below. Returns a list of pairs of points.
 
-        for col in range(self.cols-1):
-            self.model.AddBoolOr(
-                [self.zeros[0][col+1], self.zeros[1][col]] +
-                [self.zeros[0][c].Not() for c in range(col+1)]
-            )
-            self.model.AddBoolOr(
-                [self.zeros[-1][col+1], self.zeros[-2][col]] +
-                [self.zeros[-1][c].Not() for c in range(col+1)]
-            )
-        
-        for col in range(1, self.cols):
-            self.model.AddBoolOr(
-                [self.zeros[0][col-1], self.zeros[1][col]] +
-                [self.zeros[0][c].Not() for c in range(col, self.cols)]
-            )
-            self.model.AddBoolOr(
-                [self.zeros[-1][col-1], self.zeros[-2][col]] +
-                [self.zeros[-1][c].Not() for c in range(col, self.cols)]
-            )
+        """
+        dims =  self.rows, self.cols
+        xr = min(center[1], dims[1] - center[1] - 1)
+        yr = min(center[0], dims[0] - center[0] - 1)
+        for xshift in range(-xr,xr+1):
+            for yshift in range(0, yr+1):
+                if xshift <= 0 and yshift == 0:
+                    continue
+                else:
+                    yield (center[0] + yshift, center[1] + xshift), (center[0] - yshift, center[1] - xshift)
+
+    def c4_constraints(self, all_centers=False):
+        """
+        Adds constraints corresponding to partitions with C4 symmetry.
+        ......
+        .0....
+        .1....
+        ......
+        For each placement that fits the above pattern,
+        a nonsurrounding omino must contain both cells from at least one pair of cells rotationally symmetric about the 0.
+        Since the constraint is a disjunction of conjunctions, we need to create new variables.
+        This time, variables will be reused, so we'll track a dictionary of them.
+        """
+        for center, side in self.valid_c2_placements():
+            conjunction_vars = []
+            for p1, p2 in self.c2_coords_to_check(center):
+                y1, x1 = p1
+                y2, x2 = p2
+                new_var = self.model.NewBoolVar(f'c2_{x1}_{y1}_{x2}_{y2}')
+                self.model.AddBoolOr(self.zeros[y1][x1], self.zeros[y2][x2]).OnlyEnforceIf(new_var.Not())
+                self.model.AddBoolAnd(self.zeros[y1][x1].Not(), self.zeros[y2][x2].Not()).OnlyEnforceIf(new_var)
+                conjunction_vars.append(new_var)
+            yc, xc = center
+            ys1, xs1= side
+            self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
+                self.zeros[yc][xc], self.zeros[ys1][xs1].Not())
     
     def pattern_to_constraint(self, pattern:Pattern):
         self.model.AddBoolOr(
@@ -280,19 +339,22 @@ omino_instance.add_boundary_constraint(top_and_right=False)
 # omino_instance.add_corner_constraint()
 omino_instance.add_max_weight_constraint(24)
 omino_instance.add_surround_constraint()
-# omino_instance.add_s2_constraint()
+omino_instance.c2_constraints()
 for patterns in [
+    # shift_pattern, these three already covered by c2_constraints
+    # scoop_pattern,
+    # diagonal_bump_pattern,
+    flipped_U_pattern,
     corner_pattern,
-    shift_pattern,
     shifted_U_pattern,
     diamond_contact_pattern,
     offset_corner_pattern,
     offset_corner_pattern_2,
-    flipped_U_pattern,
-    scoop_pattern,
     deep_scoop_pattern,
 ]:
     omino_instance.add_all_copies_of_pattern(patterns)
+
+
 
 solver = cp_model.CpSolver()
 solution_printer = VarArraySolutionPrinter(omino_instance, do_print=True)
@@ -305,5 +367,7 @@ print('Status = %s' % solver.StatusName(status))
 print('Number of solutions found: %i' % solution_printer.solution_count())
 print(f'Time: {solver.WallTime():.3f}')
 print(f"Info: {solver.ResponseStats()}")
+# print size of model
+print(f"Model size: {omino_instance.model.Proto().ByteSize()}")
 
 # %%

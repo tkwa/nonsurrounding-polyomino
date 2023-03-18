@@ -11,6 +11,7 @@ def rotate(point,ccw_turns):
     for _ in range(ccw_turns):
         point = (-point[1],point[0])
     return point
+
 class Pattern:
     def __init__(self,bad,good=None):
         if good is None:
@@ -65,6 +66,8 @@ class Pattern:
     def to_clause():
         #todo: integrate with ortools
         pass
+
+# how to programmatically generate all symmetric patterns?
     
 #todo: experiment with larger buffers on patterns, see if that helps the solver.
 corner_pattern = """
@@ -144,11 +147,34 @@ deep_scoop_pattern = """
 .........1
 """
 
-big_corner_pattern = """
-000000000000000000
-                1
-                1
-                111
+diagonal_bump_pattern = """
+00
+ 00
+  00
+   00
+    00
+     00
+      00
+       00
+        00
+        1000
+         1.00
+            00
+             00
+              00
+               00
+                00
+                 00
+                  00
+                   00
+
 """
+
+# big_corner_pattern = """
+# 000000000000000000
+#                 1
+#                 1
+#                 111
+# """
 
 #code to extract things: l = list(Pattern(shift_pattern).all_isometric_copies_within_box(10,10))
