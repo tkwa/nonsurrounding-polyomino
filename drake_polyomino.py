@@ -695,7 +695,7 @@ P = str_to_poly("""
 1111111
 ...1
 ...1
-""".replace('#',"1"))
+""")
 for P in [P]:
     c = cover_board(B,P)
     show(tiling_render(c,N=500,scale=15))
