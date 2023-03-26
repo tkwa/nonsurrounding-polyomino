@@ -243,8 +243,8 @@ class PolyominoSATInstance:
                 xshift = x1 - center[1]
                 x2, y2 = center[1]-yshift, center[0]+xshift
                 if (xshift,yshift) != (0,0) and 0 <= x2 < dims[1] and 0 <= y2 < dims[0]:
-                    P = (x1,y1)
-                    Q = (x2,y2)
+                    P = (y1,x1)
+                    Q = (y2,x2)
                     if P<=Q:
                         yield (P,Q)
                     else:
@@ -344,7 +344,7 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
 # %%
 
-omino_instance = PolyominoSATInstance(6,7, 15)
+omino_instance = PolyominoSATInstance(6,6, 15)
 omino_instance.add_boundary_constraint(top_and_right=False)
 # omino_instance.add_corner_constraint()
 omino_instance.add_max_weight_constraint(24)
