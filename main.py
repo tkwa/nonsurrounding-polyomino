@@ -255,8 +255,9 @@ class PolyominoSATInstance:
         Since the constraint is a disjunction of conjunctions, we need to create new variables.
         This time, variables will be reused, so we'll track a dictionary of them.
 
-        Also note that 
+        Also note that the 0 can be one cell outside the bounding box. 
         """
+
         for center, side in self.valid_c2_placements():
             conjunction_vars = []
             for p1, p2 in self.c2_coords_to_check(center):
