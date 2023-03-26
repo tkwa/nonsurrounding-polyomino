@@ -180,18 +180,15 @@ class PolyominoSATInstance:
         If all_centers=False, we only check centers off the edge of the grid.
         """
         rows, cols = self.rows, self.cols
-        for row in range(rows):
-            for col in range(cols):
-                if row > 0:
-                    yield [(row, col), (row-1, col)]
-                if row < rows - 1:
-                    yield [(row, col), (row+1, col)]
-                if col > 0:
-                    yield [(row, col), (row, col-1)]
-                if col < cols - 1:
-                    yield [(row, col), (row, col+1)]
-
-        #TODO implement all_centers=True
+        for row in range(-1, rows + 1):
+            for col in range(-1, cols + 1):
+                if row in [-1, rows] and col in [-1, cols]: continue # corners
+                if 1 <= row < rows - 1 and 1 <= col < cols - 1 and not all_centers: continue
+                center = (row, col)
+                for row_offset, col_offset in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                    side = (row + row_offset, col + col_offset)
+                    if side[0] in [-1, rows] or side[1] in [-1, cols]: continue # off the edge
+                    yield center, side
                     
 
     def c2_coords_to_check(self, center):
@@ -269,7 +266,7 @@ class PolyominoSATInstance:
         Also note that the 0 can be one cell outside the bounding box.
         """
 
-        for center, sides in self.valid_c4_placements(all_centers=all_centers):
+        for center, side in self.valid_c4_placements(all_centers=all_centers):
             conjunction_vars = []
             for p1, p2 in self.c4_coords_to_check(center): # all pairs of points within a symmetric set
                 y1, x1 = p1
@@ -282,9 +279,9 @@ class PolyominoSATInstance:
                 conjunction_vars.append(pair_var)
 
             yc, xc = center
-            for ys, xs in sides:
-                self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
-                    self.zeros[yc][xc], self.zeros[ys][xs].Not())
+            ys, xs = side
+            self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
+                self.zeros[yc][xc], self.zeros[ys][xs].Not())
     
     def pattern_to_constraint(self, pattern:Pattern):
         self.model.AddBoolOr(
