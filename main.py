@@ -254,6 +254,8 @@ class PolyominoSATInstance:
         a nonsurrounding omino must contain both cells from at least one pair of cells rotationally symmetric about the 0.
         Since the constraint is a disjunction of conjunctions, we need to create new variables.
         This time, variables will be reused, so we'll track a dictionary of them.
+
+        Also note that 
         """
         for center, side in self.valid_c2_placements():
             conjunction_vars = []
