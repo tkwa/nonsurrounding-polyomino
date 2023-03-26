@@ -175,7 +175,7 @@ class PolyominoSATInstance:
                 if row < rows - 1 and col < cols - 1:
                     yield [(row, col), (row+1, col), (row, col+1)]
 
-    def valid_c4_placements(self, all_centers=True):
+    def valid_c4_placements(self, all_centers=False):
         """Helper function for below. Returns a list of two coordinate pairs (center, side).
         If all_centers=False, we only check centers off the edge of the grid.
         """
@@ -190,6 +190,8 @@ class PolyominoSATInstance:
                     yield [(row, col), (row, col-1)]
                 if col < cols - 1:
                     yield [(row, col), (row, col+1)]
+
+        #TODO implement all_centers=True
                     
 
     def c2_coords_to_check(self, center):
@@ -267,28 +269,22 @@ class PolyominoSATInstance:
         Also note that the 0 can be one cell outside the bounding box.
         """
 
-        for center, side in self.valid_c4_placements():
+        for center, sides in self.valid_c4_placements(all_centers=all_centers):
             conjunction_vars = []
-            for points in self.c4_coords_to_check(center):
-                assert 2 <= len(points) <= 4
-                
-                pair_vars = []
-                for p1, p2 in itertools.combinations(points, 2):
-                    y1, x1 = p1
-                    y2, x2 = p2
-                    if (y1, x1, y2, x2) not in self.c4_vars:
-                        self.c4_vars[(y1, x1, y2, x2)] = self.model.NewBoolVar(f'c4_{x1}_{y1}_{x2}_{y2}')
-                    pair_var = self.c4_vars[(y1, x1, y2, x2)]
-                    self.model.AddBoolOr(self.zeros[y1][x1], self.zeros[y2][x2]).OnlyEnforceIf(pair_var.Not())
-                    self.model.AddBoolAnd(self.zeros[y1][x1].Not(), self.zeros[y2][x2].Not()).OnlyEnforceIf(pair_var)
-                    pair_vars.append(pair_var)
+            for p1, p2 in self.c4_coords_to_check(center): # all pairs of points within a symmetric set
+                y1, x1 = p1
+                y2, x2 = p2
+                if (y1, x1, y2, x2) not in self.c4_vars:
+                    self.c4_vars[(y1, x1, y2, x2)] = self.model.NewBoolVar(f'c4_{x1}_{y1}_{x2}_{y2}')
+                pair_var = self.c4_vars[(y1, x1, y2, x2)]
+                self.model.AddBoolOr(self.zeros[y1][x1], self.zeros[y2][x2]).OnlyEnforceIf(pair_var.Not())
+                self.model.AddBoolAnd(self.zeros[y1][x1].Not(), self.zeros[y2][x2].Not()).OnlyEnforceIf(pair_var)
+                conjunction_vars.append(pair_var)
 
-                points_shows_ok = self.model.NewBoolVar(f'c4_points_{center[0]}_{center[1]}_{points[0][0]}_{points[0][1]}')
-                conjunction_vars.append(points_shows_ok)
             yc, xc = center
-            ys, xs= side
-            self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
-                self.zeros[yc][xc], self.zeros[ys][xs].Not())
+            for ys, xs in sides:
+                self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
+                    self.zeros[yc][xc], self.zeros[ys][xs].Not())
     
     def pattern_to_constraint(self, pattern:Pattern):
         self.model.AddBoolOr(
