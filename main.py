@@ -136,13 +136,13 @@ class PolyominoSATInstance:
             [self.zeros[0][0], self.zeros[0][cols-1], self.zeros[rows-1][0], self.zeros[rows-1][cols-1]])
         self.constraint_descriptions.append('corners')
 
-    def add_boundary_constraint(self, top_and_right = True):
+    def add_boundary_constraint(self, all_four_sides = True):
         # Omino must touch boundary on all sides
         # left (column 0) unnecessary because there's a 1 there
         rows, cols = self.rows, self.cols
         # always enforce bottom
         self.model.AddBoolOr([self.zeros[0][col].Not() for col in range(cols)])
-        if top_and_right:
+        if all_four_sides:
             self.model.AddBoolOr([self.zeros[row][cols-1].Not() for row in range(rows)])
             self.model.AddBoolOr([self.zeros[rows-1][col].Not() for col in range(cols)])
         self.constraint_descriptions.append('boundary')
@@ -174,21 +174,6 @@ class PolyominoSATInstance:
                     yield [(row, col), (row+1, col), (row, col-1)]
                 if row < rows - 1 and col < cols - 1:
                     yield [(row, col), (row+1, col), (row, col+1)]
-
-    def valid_c4_placements(self, all_centers=False):
-        """Helper function for below. Returns a list of two coordinate pairs (center, side).
-        If all_centers=False, we only check centers off the edge of the grid.
-        """
-        rows, cols = self.rows, self.cols
-        for row in range(-1, rows + 1):
-            for col in range(-1, cols + 1):
-                if row in [-1, rows] and col in [-1, cols]: continue # corners
-                if 1 <= row < rows - 1 and 1 <= col < cols - 1 and not all_centers: continue
-                center = (row, col)
-                for row_offset, col_offset in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-                    side = (row + row_offset, col + col_offset)
-                    if side[0] in [-1, rows] or side[1] in [-1, cols]: continue # off the edge
-                    yield center, side
                     
 
     def c2_coords_to_check(self, center):
@@ -228,6 +213,21 @@ class PolyominoSATInstance:
             ys2, xs2 = side2
             self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
                 self.zeros[yc][xc], self.zeros[ys1][xs1].Not(), self.zeros[ys2][xs2].Not())
+
+    def valid_c4_placements(self, all_centers=False):
+        """Helper function for below. Returns a list of two coordinate pairs (center, side).
+        If all_centers=False, we only check centers off the edge of the grid.
+        """
+        rows, cols = self.rows, self.cols
+        for row in range(-1, rows + 1):
+            for col in range(-1, cols + 1):
+                if row in [-1, rows] and col in [-1, cols]: continue # corners
+                if 1 <= row < rows - 1 and 1 <= col < cols - 1 and not all_centers: continue
+                center = (row, col)
+                for row_offset, col_offset in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                    side = (row + row_offset, col + col_offset)
+                    if not(0 <= side[0] < rows) or not(0 <= side[1] < cols): continue # off the edge
+                    yield center, side
     
     def c4_coords_to_check(self, center):
         """
@@ -280,8 +280,11 @@ class PolyominoSATInstance:
 
             yc, xc = center
             ys, xs = side
-            self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
-                self.zeros[yc][xc], self.zeros[ys][xs].Not())
+            if 0 <= yc < self.rows and 0 <= xc < self.cols:
+                self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(
+                    self.zeros[yc][xc], self.zeros[ys][xs].Not())
+            else:
+                self.model.AddBoolOr(conjunction_vars).OnlyEnforceIf(self.zeros[ys][xs].Not())
     
     def pattern_to_constraint(self, pattern:Pattern):
         self.model.AddBoolOr(
@@ -348,22 +351,23 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
 # %%
 
-omino_instance = PolyominoSATInstance(6,6, 15)
-omino_instance.add_boundary_constraint(top_and_right=False)
+omino_instance = PolyominoSATInstance(6,7, 15)
+omino_instance.add_boundary_constraint(all_four_sides=False)
 # omino_instance.add_corner_constraint()
 omino_instance.add_max_weight_constraint(24)
 omino_instance.add_surround_constraint()
 omino_instance.c2_constraints()
+omino_instance.c4_constraints()
 for patterns in [
     # shift_pattern, these three already covered by c2_constraints
     # scoop_pattern,
     # diagonal_bump_pattern,
-    flipped_U_pattern,
-    corner_pattern,
+    # flipped_U_pattern, # covered by c4_constraints
+    # corner_pattern,
+    # diamond_contact_pattern,
+    # offset_corner_pattern,
+    # offset_corner_pattern_2,
     shifted_U_pattern,
-    diamond_contact_pattern,
-    offset_corner_pattern,
-    offset_corner_pattern_2,
     deep_scoop_pattern,
 ]:
     omino_instance.add_all_copies_of_pattern(patterns)
