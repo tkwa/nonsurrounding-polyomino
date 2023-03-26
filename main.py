@@ -232,16 +232,23 @@ class PolyominoSATInstance:
         """
         Helper function for below. Returns a list of pairs of points.
 
+        We want to get every pair of points in the bounding box that are 90 degree rotations from each other.
+        Note that we aren't assuming the center is in the bounding box. 
+        We always return a sorted pair of coordinates, to avoid duplicating work.
         """
         dims =  self.rows, self.cols
-        xr = min(center[1], dims[1] - center[1] - 1)
-        yr = min(center[0], dims[0] - center[0] - 1)
-        for xshift in range(-xr,xr+1):
-            for yshift in range(0, yr+1):
-                if xshift <= 0 and yshift == 0:
-                    continue
-                else:
-                    yield (center[0] + yshift, center[1] + xshift), (center[0] - yshift, center[1] - xshift)
+        for y1 in range(0,dims[0]):
+            for x1 in range(0, dims[1]):
+                yshift = y1 - center[0]
+                xshift = x1 - center[1]
+                x2, y2 = center[1]-yshift, center[0]+xshift
+                if (xshift,yshift) != (0,0) and 0 <= x2 < dims[1] and 0 <= y2 < dims[0]:
+                    P = (x1,y1)
+                    Q = (x2,y2)
+                    if P<=Q:
+                        yield (P,Q)
+                    else:
+                        yield (Q,P)
 
     def c4_constraints(self, all_centers=False):
         """
