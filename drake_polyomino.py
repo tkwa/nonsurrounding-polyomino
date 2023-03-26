@@ -681,7 +681,7 @@ def str_to_poly(q,shape='square'):
 #this board describes a tiling condition, where 2s must be covered, 1s may be covered, and 0s may not be covered
 B = """
 121
-202
+20
 121
 """
 P = str_to_poly("""
@@ -690,13 +690,43 @@ P = str_to_poly("""
 1111111
 1.....1
 1.....1
-1.....
+1.....1
 1.....1
 1111111
 ...1
 ...1
 """)
+P = str_to_poly("""
+..1111
+..1..1
+111...11
+1......1
+1......1
+111..111
+..1..1
+..1111
+""")   
+
+
+P = str_to_poly("""
+..11111111
+..11111111
+......1.....
+11....1...11
+1.....1....1
+1.....1....1
+1.....1....1
+111111111111
+1.....1....1
+1.....1....1
+1.....1....1
+11....1...11
+......1.....
+..11111111
+..11111111
+""")   
+
+print(P.n)            
 for P in [P]:
     c = cover_board(B,P)
     show(tiling_render(c,N=500,scale=15))
-# %%
